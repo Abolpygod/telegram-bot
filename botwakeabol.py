@@ -2,8 +2,9 @@ import telebot
 import datetime
 import time
 from threading import Thread
-from flask import Flask
+from flask import Flask, request
 import random
+import os
 
 # -------------------------
 # 🔵 توکن و چت‌آیدی
@@ -13,20 +14,19 @@ CHAT_ID = 8110203831
 bot = telebot.TeleBot(TOKEN)
 
 # -------------------------
-# 🔵 سیستم روشن ماندن (Replit)
+# 🌐 Flask برای رندر
 # -------------------------
-app = Flask('')
+app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot is alive!"
+    return "Bot is alive on Render ✔️"
 
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    update = request.stream.read().decode("utf-8")
+    bot.process_new_updates([telebot.types.Update.de_json(update)])
+    return "OK", 200
 
 # -------------------------
 # 🔥 ذخیره ساعت بیدار شدن
@@ -101,8 +101,7 @@ def check_birthday():
     now = datetime.datetime.now()
     if now.month == 11 and now.day == 21:
         if now.strftime("%H:%M") == "08:30":
-            send("🎉🎂 *تولدت مبارک قهرمان!* 🎂🎉\n"
-                 "این سال سال جهش بزرگته! ادامه بده!")
+            send("🎉🎂 *تولدت مبارک قهرمان!* 🎂🎉\nاین سال سال جهش بزرگته!")
 
 # -------------------------
 # 📅 برنامه روزانه
@@ -169,13 +168,11 @@ def random_motivation(message):
 @bot.message_handler(commands=['wake'])
 def record_wake(message):
     global wake_time
-
     now = datetime.datetime.now()
     wake_time = now
 
     send("🔥 *ثبت شد!* تو ساعت " + now.strftime("%H:%M") + " بیدار شدی.")
 
-    # فاصله تا اولین فعالیت
     first_task = datetime.datetime.strptime(FIRST_TASK_TIME, "%H:%M")
     first_task = now.replace(hour=first_task.hour, minute=first_task.minute)
 
@@ -192,7 +189,6 @@ def record_wake(message):
 # -------------------------
 # 🎮 بخش گیم (فقط زمان استراحت)
 # -------------------------
-
 def is_rest_time():
     now = datetime.datetime.now().strftime("%H:%M")
     rest_ranges = [
@@ -286,7 +282,6 @@ def time_checker():
 
         check_birthday()
 
-        # پیام انگیزشی تصادفی هر روز ساعت 08:20
         if current == "08:20":
             send(random.choice(motivations))
 
@@ -302,8 +297,13 @@ def time_checker():
         time.sleep(30)
 
 # -------------------------
-# 🚀 اجرای ربات
+# 🚀 اجرای ربات روی Render
 # -------------------------
-keep_alive()
-Thread(target=time_checker).start()
-bot.polling()
+def start_bot():
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.set_webhook(url=os.getenv("RENDER_EXTERNAL_URL") + "/webhook")
+    Thread(target=time_checker).start()
+
+start_bot()
+app.run(host="0.0.0.0", port=10000)
