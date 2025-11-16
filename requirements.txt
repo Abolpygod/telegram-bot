@@ -1,2 +1,5 @@
-pyTelegramBotAPI==4.15.2
-python-telegram-bot==20.7
+pyTelegramBotAPI==4.16.1
+flask==3.0.0
+gunicorn
+requests
+python-dotenv
