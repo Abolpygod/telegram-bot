@@ -3,5 +3,3 @@ Flask==3.0.0
 gunicorn
 requests
 python-dotenv
-apscheduler==3.10.4
-pytz
